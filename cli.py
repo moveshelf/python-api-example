@@ -13,7 +13,9 @@ if __name__ == "__main__":
             print(p)
 
     def uploadFile(args):
-        clip_id = api.uploadFile(args.filePath, args.project, Metadata(**vars(args)))
+        params = ('title', 'description', 'allowDownload', 'allowUnlistedAccess')
+        clip_id = api.uploadFile(args.filePath, args.project,
+                {k: vars(args)[k] for k in params if k in vars(args)})
         print("Created new clip with ID: {}".format(clip_id))
 
     parser = argparse.ArgumentParser()

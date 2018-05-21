@@ -1,31 +1,49 @@
 import base64
 import json
 import logging
+import re
 import struct
 
 from os import path
+try:
+    import enum
+except ImportError:
+    print('Please install enum34 package')
+    raise
 
 import requests
+import six
 from crcmod.predefined import mkPredefinedCrcFun
+from mypy_extensions import TypedDict
 
 logger = logging.getLogger('moveshelf-api')
 
-class Metadata(dict):
-    def __init__(
-                self,
-                title=None,
-                description=None,
-                previewImageUri=None,
-                allowDownload=False,
-                allowUnlistedAccess=False,
-                **ignored):
-        super(Metadata, self).__init__(
-            title=title,
-            description=description,
-            previewImageUri=previewImageUri,
-            allowDownload=allowDownload,
-            allowUnlistedAccess=allowUnlistedAccess
-        )
+class TimecodeFramerate(enum.Enum):
+    FPS_24 = '24'
+    FPS_25 = '25'
+    FPS_29_97 = '29.97'
+    FPS_30 = '30'
+    FPS_50 = '50'
+    FPS_59_94 = '59.94'
+    FPS_60 = '60'
+    FPS_1000 = '1000'
+
+
+Timecode = TypedDict('Timecode', {
+    'timecode': str,
+    'framerate': TimecodeFramerate
+    })
+
+
+Metadata = TypedDict('Metadata', {
+    'title': str,
+    'description': str,
+    'previewImageUri': str,
+    'allowDownload': bool,
+    'allowUnlistedAccess': bool,
+    'startTimecode': Timecode
+    },
+    total=False)
 
 
 class MoveshelfApi(object):
@@ -52,7 +70,12 @@ class MoveshelfApi(object):
     def uploadFile(self, file_path, project, metadata=Metadata()):
         logger.info('Uploading %s', file_path)
 
-        metadata['title'] = metadata['title'] or path.basename(file_path)
+        metadata['title'] = metadata.get('title', path.basename(file_path))
+        metadata['allowDownload'] = metadata.get('allowDownload', False)
+        metadata['allowUnlistedAccess'] = metadata.get('allowUnlistedAccess', False)
+
+        if metadata.get('startTimecode'):
+            self._validateAndUpdateTimecode(metadata['startTimecode'])
 
         creation_response = self._createClip(project, {
             'clientId': file_path,
@@ -66,6 +89,36 @@ class MoveshelfApi(object):
             requests.put(creation_response['uploadUrl'], data=fp)
 
         return creation_response['mocapClip']['id']
+
+    def updateClipMetadata(self, clip_id, metadata):
+        logger.info('Updating metadata for clip: %s', clip_id)
+
+        if metadata.get('startTimecode'):
+            self._validateAndUpdateTimecode(metadata['startTimecode'])
+
+        res = self._dispatch_graphql(
+            '''
+            mutation updateClip($input: UpdateClipInput!) {
+                updateClip(clipData: $input) {
+                    clip {
+                        id
+                    }
+                }
+            }
+            ''',
+            input = {
+                'id': clip_id,
+                'metadata': metadata
+            }
+        )
+        logging.info('Updated clip ID: %s', res['updateClip']['clip']['id'])
+
+    def _validateAndUpdateTimecode(self, tc):
+        assert tc.get('timecode')
+        assert tc.get('framerate')
+        assert isinstance(tc['framerate'], TimecodeFramerate)
+        assert re.match('\d{2}:\d{2}:\d{2}[:;]\d{2,3}', tc['timecode'])
+        tc['framerate'] = tc['framerate'].name
 
     def _createClip(self, project, clip_creation_data):
         data = self._dispatch_graphql(
@@ -92,7 +145,8 @@ class MoveshelfApi(object):
     def _calculateCrc32c(self, file_path):
         with open(file_path, 'rb') as fp:
             crc = self._crc32c(fp.read())
-            return base64.b64encode(struct.pack('>I', crc))
+            b64_crc = base64.b64encode(struct.pack('>I', crc))
+            return b64_crc if six.PY2 else b64_crc.decode('utf8')
 
     def _dispatch_graphql(self, query, **kwargs):
         api_url = 'https://api.moveshelf.com/graphql'
