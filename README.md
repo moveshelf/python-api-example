@@ -75,27 +75,7 @@ To upload data to Moveshelf requires four steps:
 3. Create a record of the data via the API. This allocates a unique identifier for the data, and generates an upload URL.
 4. Upload the data. Data is encrypted and stored redundantly in multiple data centers.
 
-The clip metadata is described by a simple dictionary with a defined set of keys:
-
-```py
-class Metadata(dict):
-    def __init__(
-                self,
-                title=None,
-                description=None,
-                previewImageUri=None,
-                allowDownload=False,
-                allowUnlistedAccess=False,
-                **ignored):
-        super(Metadata, self).__init__(
-            title=title,
-            description=description,
-            previewImageUri=previewImageUri,
-            allowDownload=allowDownload,
-            allowUnlistedAccess=allowUnlistedAccess
-        )
-```
-
+The clip metadata is described by a simple dictionary with a defined set of keys.
 Note that all metadata fields are optional, but in this example we have explicitly
 set them. The default values provided by the API are:
 
