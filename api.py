@@ -51,7 +51,7 @@ class MoveshelfApi(object):
         self._crc32c = mkPredefinedCrcFun('crc32c')
         self.api_url = api_url 
         if path.isfile(api_key_file) == False:
-            raise 'No valid API key. Please check instructions on https://github.com/moveshelf/python-api-example'
+            raise ValueError("No valid API key. Please check instructions on https://github.com/moveshelf/python-api-example")
 
         with open(api_key_file, 'r') as key_file:
             data = json.load(key_file)
