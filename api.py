@@ -47,8 +47,12 @@ Metadata = TypedDict('Metadata', {
 
 
 class MoveshelfApi(object):
-    def __init__(self, api_key_file='mvshlf-api-key.json'):
+    def __init__(self, api_key_file='mvshlf-api-key.json', api_url = 'https://api.moveshelf.com/graphql'):
         self._crc32c = mkPredefinedCrcFun('crc32c')
+        self.api_url = api_url 
+        if path.isfile(api_key_file) == False:
+            raise 'No valid API key. Please check instructions on https://github.com/moveshelf/python-api-example'
+
         with open(api_key_file, 'r') as key_file:
             data = json.load(key_file)
             self._auth_token = BearerTokenAuth(data['secretKey'])
@@ -149,12 +153,11 @@ class MoveshelfApi(object):
             return b64_crc if six.PY2 else b64_crc.decode('utf8')
 
     def _dispatch_graphql(self, query, **kwargs):
-        api_url = 'https://api.moveshelf.com/graphql'
         payload = {
             'query': query,
             'variables': kwargs
         }
-        response = requests.post(api_url, json=payload, auth=self._auth_token)
+        response = requests.post(self.api_url, json=payload, auth=self._auth_token)
         response.raise_for_status()
 
         json_data = response.json()
