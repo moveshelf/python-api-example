@@ -155,6 +155,7 @@ class MoveshelfApi(object):
                     id
                     dataType
                     originalFileName
+                    previewDataUri
                     originalDataDownloadUri
                 }
                 }

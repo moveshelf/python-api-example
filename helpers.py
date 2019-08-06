@@ -20,7 +20,7 @@ class Helpers:
     @staticmethod
     def downloadDataToPath(data, dirpath):
         for d in data:
-            url = d['originalDataDownloadUri']
+            url = d['previewDataUri']
             filename = d['originalFileName']
             if not os.path.exists(dirpath):
                 os.makedirs(dirpath)
