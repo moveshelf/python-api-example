@@ -117,6 +117,78 @@ class MoveshelfApi(object):
         )
         logging.info('Updated clip ID: %s', res['updateClip']['clip']['id'])
 
+    def getProjectClips(self, project_id, limit):
+        data = self._dispatch_graphql(
+            '''
+            query getAdditionalDataInfo($projectId: ID!, $limit: Int) {
+            node(id: $projectId) {
+                ... on Project {
+                id,
+                name,
+                clips(first: $limit) {
+                edges {
+                    node {
+                        id,
+                        title,
+                        projectPath
+                    }
+                    }
+                }
+                }
+            }
+            }
+            ''',
+            projectId = project_id,
+            limit = limit
+        )
+
+        return [c['node'] for c in data['node']['clips']['edges']] 
+
+    def getAdditionalData(self, clip_id):
+        data = self._dispatch_graphql(
+            '''
+            query getAdditionalDataInfo($clipId: ID!) {
+            node(id: $clipId) {
+                ... on MocapClip {
+                id,
+                additionalData {
+                    id
+                    dataType
+                    originalFileName
+                    originalDataDownloadUri
+                }
+                }
+            }
+            }
+            ''',
+            clipId = clip_id
+        )
+
+        return data['node']['additionalData']
+
+    def getProjectAndClips(self):
+        data = self._dispatch_graphql(
+            '''
+            query {
+                viewer {
+                    projects {
+                        id
+                        name
+                        clips(first: 20) {
+                            edges {
+                                node {
+                                    id,
+                                    title
+                                    }
+                                }
+                            }
+                    }
+                }
+            }
+            '''
+        )
+        return [p for p in data['viewer']['projects']]
+
     def _validateAndUpdateTimecode(self, tc):
         assert tc.get('timecode')
         assert tc.get('framerate')
