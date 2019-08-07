@@ -57,5 +57,5 @@ class Helpers:
             if not os.path.exists(dirpath):
                 os.makedirs(dirpath)
 
-            if data['dataType'] != 'video' and data['dataType'] != 'motion':
+            if d['dataType'] != 'video' and d['dataType'] != 'motion':
                 Helpers.download_file(url, dirpath + '/' + filename)
