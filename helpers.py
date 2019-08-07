@@ -1,6 +1,8 @@
 import os
 import logging
 import requests
+import json
+import pandas as pd
 
 logger = logging.getLogger('moveshelf-api')
 
@@ -17,6 +19,20 @@ class Helpers:
                         # f.flush()
         return local_filename
 
+    @staticmethod
+    def parseEventFile(eventsFile):
+        with open(eventsFile) as f:
+          events = json.load(f)
+      
+        return pd.DataFrame.from_dict(events['events'])
+
+    @staticmethod
+    def parseKinematicsFile(kinematicsFile):
+        with open(kinematicsFile) as f: #let's open and parse kinamatic angles 
+          kin = json.load(f)
+      
+        return pd.DataFrame.from_dict(kin['data']) #create a panda DataFrame for easy manipulation
+    
     @staticmethod
     def downloadDataToPath(data, dirpath):
         for d in data:
