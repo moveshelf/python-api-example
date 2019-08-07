@@ -9,6 +9,11 @@ logger = logging.getLogger('moveshelf-api')
 class Helpers:
 
     @staticmethod
+    def timeToCycle(series):
+        series = (series - series.min()) / (series.max() - series.min())
+        return series * 100
+
+    @staticmethod
     def download_file(url, local_filename):
         with requests.get(url, stream=True) as r:
             r.raise_for_status()
