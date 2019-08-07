@@ -23,6 +23,17 @@ class Helpers:
                         f.write(chunk)
                         # f.flush()
         return local_filename
+   
+    @staticmethod
+    def parseParametersFile(paramsFile):
+        with open(paramsFile) as f:
+          params = json.load(f)
+    
+        params_df = pd.DataFrame.from_dict(params['data'])
+        values_df = params_df['values'].apply(pd.Series)
+        params_df = pd.concat([ params_df.drop(['values'], axis=1), values_df], axis=1)
+    
+        return params_df
 
     @staticmethod
     def parseEventFile(eventsFile):
