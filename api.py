@@ -94,6 +94,22 @@ class MoveshelfApi(object):
 
         return creation_response['mocapClip']['id']
 
+    def uploadAdditionalData(self, file_path, clipId, dataType, filename):
+        logger.info('Uploading %s', file_path)
+             
+        creation_response = self._createAdditionalData(clipId, {
+            'clientId': file_path,
+            'crc32c': self._calculateCrc32c(file_path),
+            'filename': filename,
+            'dataType': dataType
+        })
+        logging.info('Created clip ID: %s', creation_response['data']['id'])
+
+        with open(file_path, 'rb') as fp:
+            requests.put(creation_response['uploadUrl'], data=fp)
+
+        return creation_response['data']['id']
+
     def updateClipMetadata(self, clip_id, metadata):
         logger.info('Updating metadata for clip: %s', clip_id)
 
@@ -224,6 +240,31 @@ class MoveshelfApi(object):
             crc = self._crc32c(fp.read())
             b64_crc = base64.b64encode(struct.pack('>I', crc))
             return b64_crc if six.PY2 else b64_crc.decode('utf8')
+
+    def _createAdditionalData(self, clipId, metadata):
+        data = self._dispatch_graphql(
+            '''
+            mutation createAdditionalData($input: CreateAdditionalDataInput) {
+                createAdditionalData(input: $input) {
+                uploadUrl
+                data {
+                    id
+                    dataType
+                    originalFileName
+                    uploadStatus
+                }
+                }
+            }
+            ''',
+            input = {
+                'clipId': clipId,
+                'dataType': metadata['dataType'],
+                'crc32c': metadata['crc32c'],
+                'filename': metadata['filename'],
+                'clientId': metadata['clientId']
+            })
+
+        return data['createAdditionalData']
 
     def _dispatch_graphql(self, query, **kwargs):
         payload = {
