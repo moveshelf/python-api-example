@@ -57,6 +57,27 @@ class MoveshelfApi(object):
             data = json.load(key_file)
             self._auth_token = BearerTokenAuth(data['secretKey'])
 
+    def getProjectDatasets(self, project_id):
+        data = self._dispatch_graphql(
+            '''
+            query getProjectDatasets($projectId: ID!) {
+            node(id: $projectId) {
+                ... on Project {
+                id,
+                name,
+                datasets {
+                    name,
+                    downloadUri
+                }
+                }
+            }
+            }
+            ''',
+            projectId = project_id
+        )
+
+        return [ d for d in data['node']['datasets']]
+
     def getUserProjects(self):
         data = self._dispatch_graphql(
             '''
