@@ -20,5 +20,8 @@ class Dataset(object):
     def get_test_set(self):
       return (self.data['test_patterns'], self.data['test_classes'])
 
+    def get_test_ids(self):
+        return self.data['test_ids']
+
     def get_labels(self):
       return self.data['class_labels']
