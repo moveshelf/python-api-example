@@ -47,11 +47,36 @@ Metadata = TypedDict('Metadata', {
 
 
 class MoveshelfApi(object):
-    def __init__(self, api_key_file='mvshlf-api-key.json'):
+    def __init__(self, api_key_file='mvshlf-api-key.json', api_url = 'https://api.moveshelf.com/graphql'):
         self._crc32c = mkPredefinedCrcFun('crc32c')
+        self.api_url = api_url 
+        if path.isfile(api_key_file) == False:
+            raise ValueError("No valid API key. Please check instructions on https://github.com/moveshelf/python-api-example")
+
         with open(api_key_file, 'r') as key_file:
             data = json.load(key_file)
             self._auth_token = BearerTokenAuth(data['secretKey'])
+
+    def getProjectDatasets(self, project_id):
+        data = self._dispatch_graphql(
+            '''
+            query getProjectDatasets($projectId: ID!) {
+            node(id: $projectId) {
+                ... on Project {
+                id,
+                name,
+                datasets {
+                    name,
+                    downloadUri
+                }
+                }
+            }
+            }
+            ''',
+            projectId = project_id
+        )
+
+        return [ d for d in data['node']['datasets']]
 
     def getUserProjects(self):
         data = self._dispatch_graphql(
@@ -90,6 +115,22 @@ class MoveshelfApi(object):
 
         return creation_response['mocapClip']['id']
 
+    def uploadAdditionalData(self, file_path, clipId, dataType, filename):
+        logger.info('Uploading %s', file_path)
+             
+        creation_response = self._createAdditionalData(clipId, {
+            'clientId': file_path,
+            'crc32c': self._calculateCrc32c(file_path),
+            'filename': filename,
+            'dataType': dataType
+        })
+        logging.info('Created clip ID: %s', creation_response['data']['id'])
+
+        with open(file_path, 'rb') as fp:
+            requests.put(creation_response['uploadUrl'], data=fp)
+
+        return creation_response['data']['id']
+
     def updateClipMetadata(self, clip_id, metadata):
         logger.info('Updating metadata for clip: %s', clip_id)
 
@@ -112,6 +153,79 @@ class MoveshelfApi(object):
             }
         )
         logging.info('Updated clip ID: %s', res['updateClip']['clip']['id'])
+
+    def getProjectClips(self, project_id, limit):
+        data = self._dispatch_graphql(
+            '''
+            query getAdditionalDataInfo($projectId: ID!, $limit: Int) {
+            node(id: $projectId) {
+                ... on Project {
+                id,
+                name,
+                clips(first: $limit) {
+                edges {
+                    node {
+                        id,
+                        title,
+                        projectPath
+                    }
+                    }
+                }
+                }
+            }
+            }
+            ''',
+            projectId = project_id,
+            limit = limit
+        )
+
+        return [c['node'] for c in data['node']['clips']['edges']] 
+
+    def getAdditionalData(self, clip_id):
+        data = self._dispatch_graphql(
+            '''
+            query getAdditionalDataInfo($clipId: ID!) {
+            node(id: $clipId) {
+                ... on MocapClip {
+                id,
+                additionalData {
+                    id
+                    dataType
+                    originalFileName
+                    previewDataUri
+                    originalDataDownloadUri
+                }
+                }
+            }
+            }
+            ''',
+            clipId = clip_id
+        )
+
+        return data['node']['additionalData']
+
+    def getProjectAndClips(self):
+        data = self._dispatch_graphql(
+            '''
+            query {
+                viewer {
+                    projects {
+                        id
+                        name
+                        clips(first: 20) {
+                            edges {
+                                node {
+                                    id,
+                                    title
+                                    }
+                                }
+                            }
+                    }
+                }
+            }
+            '''
+        )
+        return [p for p in data['viewer']['projects']]
 
     def _validateAndUpdateTimecode(self, tc):
         assert tc.get('timecode')
@@ -148,13 +262,37 @@ class MoveshelfApi(object):
             b64_crc = base64.b64encode(struct.pack('>I', crc))
             return b64_crc if six.PY2 else b64_crc.decode('utf8')
 
+    def _createAdditionalData(self, clipId, metadata):
+        data = self._dispatch_graphql(
+            '''
+            mutation createAdditionalData($input: CreateAdditionalDataInput) {
+                createAdditionalData(input: $input) {
+                uploadUrl
+                data {
+                    id
+                    dataType
+                    originalFileName
+                    uploadStatus
+                }
+                }
+            }
+            ''',
+            input = {
+                'clipId': clipId,
+                'dataType': metadata['dataType'],
+                'crc32c': metadata['crc32c'],
+                'filename': metadata['filename'],
+                'clientId': metadata['clientId']
+            })
+
+        return data['createAdditionalData']
+
     def _dispatch_graphql(self, query, **kwargs):
-        api_url = 'https://api.moveshelf.com/graphql'
         payload = {
             'query': query,
             'variables': kwargs
         }
-        response = requests.post(api_url, json=payload, auth=self._auth_token)
+        response = requests.post(self.api_url, json=payload, auth=self._auth_token)
         response.raise_for_status()
 
         json_data = response.json()
