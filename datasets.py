@@ -8,9 +8,10 @@ class Dataset(object):
         self.mvshlf_api = mvshlf_api
         self.project_id = project_id
 
-    def load_data(self):
-        dataset = self.mvshlf_api.getProjectDatasets(self.project_id)
-        url = dataset[0]['downloadUri']
+    def load_data(self, url = None):
+        if url is None:
+            dataset = self.mvshlf_api.getProjectDatasets(self.project_id)
+            url = dataset[0]['downloadUri']
         r = requests.get(url, stream = True)
         self.data = np.load(BytesIO(r.raw.read()))
 
