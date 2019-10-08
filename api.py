@@ -94,13 +94,12 @@ class MoveshelfApi(object):
             }
             ''',
         )
-        return data['viewer']['projects']
+        return [p['name'] for p in data['viewer']['projects']]
 
 
     def uploadFile(self, file_path, project, metadata=Metadata()):
         logger.info('Uploading %s', file_path)
 
-# metadata title va storto 
         metadata['title'] = metadata.get('title', path.basename(file_path))
         metadata['allowDownload'] = metadata.get('allowDownload', False)
         metadata['allowUnlistedAccess'] = metadata.get('allowUnlistedAccess', False)
