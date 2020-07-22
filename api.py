@@ -154,6 +154,42 @@ class MoveshelfApi(object):
         )
         logging.info('Updated clip ID: %s', res['updateClip']['clip']['id'])
 
+    def createPatient(self, project_id, name):
+        data = self._dispatch_graphql(
+            '''
+                mutation createPatientMutation($projectId: String!, $name: String!) {
+                    createPatient(projectId: $projectId, name: $name) {
+                        patient {
+                            id
+                            name
+                        }
+                    }
+                }
+            ''',
+            projectId = project_id,
+            name = name
+        )
+
+        return data['createPatient']['patient']
+
+    def createSession(self, project_id, session_path):
+        data = self._dispatch_graphql(
+            '''
+                mutation createSessionMutation($projectId: String!, $projectPath: String!) {
+                    createSession(projectId: $projectId, projectPath: $projectPath) {
+                        session {
+                            id
+                            projectPath
+                        }
+                    }
+                }
+            ''',
+            projectId = project_id,
+            projectPath = session_path
+        )
+
+        return data['createSession']['session']
+
     def getProjectClips(self, project_id, limit):
         data = self._dispatch_graphql(
             '''
