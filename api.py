@@ -154,9 +154,44 @@ class MoveshelfApi(object):
         )
         logging.info('Updated clip ID: %s', res['updateClip']['clip']['id'])
 
-    def getProjectClips(self, project_id, limit):
+    def createPatient(self, project_id, name):
         data = self._dispatch_graphql(
             '''
+                mutation createPatientMutation($projectId: String!, $name: String!) {
+                    createPatient(projectId: $projectId, name: $name) {
+                        patient {
+                            id
+                            name
+                        }
+                    }
+                }
+            ''',
+            projectId = project_id,
+            name = name
+        )
+
+        return data['createPatient']['patient']
+
+    def createSession(self, project_id, session_path):
+        data = self._dispatch_graphql(
+            '''
+                mutation createSessionMutation($projectId: String!, $projectPath: String!) {
+                    createSession(projectId: $projectId, projectPath: $projectPath) {
+                        session {
+                            id
+                            projectPath
+                        }
+                    }
+                }
+            ''',
+            projectId = project_id,
+            projectPath = session_path
+        )
+
+        return data['createSession']['session']
+
+    def getProjectClips(self, project_id, limit, include_download_link = False):
+        query = '''
             query getAdditionalDataInfo($projectId: ID!, $limit: Int) {
             node(id: $projectId) {
                 ... on Project {
@@ -174,7 +209,32 @@ class MoveshelfApi(object):
                 }
             }
             }
-            ''',
+            '''
+        if include_download_link: 
+            query = '''
+                query getAdditionalDataInfo($projectId: ID!, $limit: Int) {
+                node(id: $projectId) {
+                    ... on Project {
+                    id,
+                    name,
+                    clips(first: $limit) {
+                    edges {
+                        node {
+                            id,
+                            title,
+                            projectPath
+                            originalFileName
+                            originalDataDownloadUri
+                        }
+                        }
+                    }
+                    }
+                }
+                }
+                '''
+
+        data = self._dispatch_graphql(
+            query,
             projectId = project_id,
             limit = limit
         )
