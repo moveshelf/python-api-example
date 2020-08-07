@@ -190,9 +190,8 @@ class MoveshelfApi(object):
 
         return data['createSession']['session']
 
-    def getProjectClips(self, project_id, limit):
-        data = self._dispatch_graphql(
-            '''
+    def getProjectClips(self, project_id, limit, include_download_link = False):
+        query = '''
             query getAdditionalDataInfo($projectId: ID!, $limit: Int) {
             node(id: $projectId) {
                 ... on Project {
@@ -210,7 +209,32 @@ class MoveshelfApi(object):
                 }
             }
             }
-            ''',
+            '''
+        if include_download_link: 
+            query = '''
+                query getAdditionalDataInfo($projectId: ID!, $limit: Int) {
+                node(id: $projectId) {
+                    ... on Project {
+                    id,
+                    name,
+                    clips(first: $limit) {
+                    edges {
+                        node {
+                            id,
+                            title,
+                            projectPath
+                            originalFileName
+                            originalDataDownloadUri
+                        }
+                        }
+                    }
+                    }
+                }
+                }
+                '''
+
+        data = self._dispatch_graphql(
+            query,
             projectId = project_id,
             limit = limit
         )
