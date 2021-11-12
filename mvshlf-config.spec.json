@@ -1,0 +1,5 @@
+{
+	"apiKeyFileName":"mvshlf-api-key.json",
+	"apiUrl":"https://api.moveshelf.com/graphql",
+	"application":"None"
+}

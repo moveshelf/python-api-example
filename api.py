@@ -85,12 +85,22 @@ class MoveshelfApi(object):
                 viewer {
                     projects {
                         name
+                        id
                     }
                 }
             }
             '''
         )
-        return [p['name'] for p in data['viewer']['projects']]
+        return [{k:v for k,v in p.items() if k in ['name','id']} for p in data['viewer']['projects']]
+
+    def createClip(self, project, metadata=Metadata() ):
+        creation_response = self._createClip(project, {
+            'clientId': 'manual',
+            'metadata': metadata
+        })
+        logging.info('Created clip ID: %s', creation_response['mocapClip']['id'])
+
+        return creation_response['mocapClip']['id']
 
     def uploadFile(self, file_path, project, metadata=Metadata()):
         logger.info('Uploading %s', file_path)
@@ -117,7 +127,7 @@ class MoveshelfApi(object):
 
     def uploadAdditionalData(self, file_path, clipId, dataType, filename):
         logger.info('Uploading %s', file_path)
-             
+
         creation_response = self._createAdditionalData(clipId, {
             'clientId': file_path,
             'crc32c': self._calculateCrc32c(file_path),
@@ -154,7 +164,7 @@ class MoveshelfApi(object):
         )
         logging.info('Updated clip ID: %s', res['updateClip']['clip']['id'])
 
-    def createPatient(self, project_id, name):
+    def createSubject(self, project_id, name):
         data = self._dispatch_graphql(
             '''
                 mutation createPatientMutation($projectId: String!, $name: String!) {
@@ -172,11 +182,50 @@ class MoveshelfApi(object):
 
         return data['createPatient']['patient']
 
-    def createSession(self, project_id, session_path):
+    def updateSubjectMetadataInfo(self, subject_id, info_to_save):
         data = self._dispatch_graphql(
             '''
-                mutation createSessionMutation($projectId: String!, $projectPath: String!) {
-                    createSession(projectId: $projectId, projectPath: $projectPath) {
+                mutation updatePatientMutation($patientId: ID!, $metadata: JSONString) {
+                    updatePatient(patientId: $patientId, metadata: $metadata) {
+                        updated
+                    }
+                }
+            ''',
+            patientId = subject_id,
+            metadata = info_to_save
+        )
+
+        return data['updatePatient']['updated']
+
+    def getsubjectContext(self, subject_id):
+        data = self._dispatch_graphql(
+            '''
+                query getPatientContext($patientId: ID!) {
+                    node(id: $patientId) {
+                        ... on Patient {
+                            id,
+                            name,
+                            metadata,
+                            project {
+                                id
+                                description
+                                canEdit
+                                unlistedAccess
+                            }
+                        }
+                    }
+                }
+            ''',
+            patientId = subject_id
+        )
+
+        return data['node']
+
+    def createSession(self, project_id, session_path, subject_id):
+        data = self._dispatch_graphql(
+            '''
+                mutation createSessionMutation($projectId: String!, $projectPath: String!, $patientId: ID!) {
+                    createSession(projectId: $projectId, projectPath: $projectPath, patientId: $patientId) {
                         session {
                             id
                             projectPath
@@ -185,7 +234,8 @@ class MoveshelfApi(object):
                 }
             ''',
             projectId = project_id,
-            projectPath = session_path
+            projectPath = session_path,
+            patientId = subject_id
         )
 
         return data['createSession']['session']
@@ -210,7 +260,7 @@ class MoveshelfApi(object):
             }
             }
             '''
-        if include_download_link: 
+        if include_download_link:
             query = '''
                 query getAdditionalDataInfo($projectId: ID!, $limit: Int) {
                 node(id: $projectId) {
@@ -239,7 +289,7 @@ class MoveshelfApi(object):
             limit = limit
         )
 
-        return [c['node'] for c in data['node']['clips']['edges']] 
+        return [c['node'] for c in data['node']['clips']['edges']]
 
     def getAdditionalData(self, clip_id):
         data = self._dispatch_graphql(
@@ -286,6 +336,157 @@ class MoveshelfApi(object):
             '''
         )
         return [p for p in data['viewer']['projects']]
+
+    def getProjectSubjects(self, project_id):
+        data = self._dispatch_graphql(
+            '''
+            query getProjectPatients($projectId: ID!) {
+                node(id: $projectId) {
+                    ... on Project {
+                        id,
+                        name,
+                        description,
+                        canEdit,
+                        patients {
+                            id
+                            name
+                            metadata
+                        }
+                        sessions {
+                            id
+                            projectPath
+                        }
+                    }
+                }
+            }
+            ''',
+            projectId = project_id
+        )
+        return [{k:v for k,v in p.items() if k in ['name','id']} for p in data['node']['patients']]
+
+    def getSubjectDetails(self, subject_id):
+        data = self._dispatch_graphql(
+            '''
+            query getPatient($patientId: ID!) {
+                node(id: $patientId) {
+                    ... on Patient {
+                        id,
+                        name,
+                        project {
+                            id
+                        }
+                        reports {
+                            id
+                            title
+                        }
+                        sessions {
+                            id
+                            projectPath
+                            clips {
+                                id
+                                title
+                                created
+                                projectPath
+                                uploadStatus
+                                hasCharts
+                            }
+                            norms {
+                                id
+                                name
+                                uploadStatus
+                                projectPath
+                                clips {
+                                    id
+                                    title
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            ''',
+            patientId = subject_id
+        )
+        # return {k:v for k,v in data['node'].items() if k in ['name','id']}
+        return data['node']
+
+    def processGaitTool(self, clip_ids, trial_type):
+        data = self._dispatch_graphql(
+            '''
+            mutation processGaitTool($clips: [String!], $trialType: String) {
+                processGaitTool(clips: $clips, trialType: $trialType) {
+                    jobId
+                }
+            }
+            ''',
+            clips = clip_ids,
+            trialType = trial_type
+
+        )
+        return data['processGaitTool']['jobId']
+
+    def getJobStatus(self, job_id):
+        data = self._dispatch_graphql(
+            '''
+            query jobStatus($jobId: ID!) {
+                node(id: $jobId) {
+                    ... on Job {
+                        id,
+                        status,
+                        result,
+                        description
+                    }
+                }
+            }
+            ''',
+            jobId = job_id
+        )
+        return data['node']
+
+    def getSessionById(self, session_id):
+        data = self._dispatch_graphql(
+            '''
+            query getSession($sessionId: ID!) {
+                node(id: $sessionId) {
+                    ... on Session {
+                        id,
+                        projectPath
+                        project {
+                            id
+                            name
+                            canEdit
+                        }
+                        clips {
+                            id
+                            title
+                            created
+                            projectPath
+                            uploadStatus
+                            hasCharts
+                            hasVideo
+                        }
+                        norms {
+                            id
+                            name
+                            uploadStatus
+                            projectPath
+                            clips {
+                                id
+                                title
+                            }
+                        }
+                        patient {
+                        id
+                        name
+                        }
+                    }
+                }
+            }
+            ''',
+            sessionId = session_id
+        )
+        return data['node']
+
 
     def _validateAndUpdateTimecode(self, tc):
         assert tc.get('timecode')
