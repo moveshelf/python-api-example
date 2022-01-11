@@ -81,6 +81,7 @@ if not sessionExists:
 
 session = api.getSessionById(sessionId)
 
+sessionName = session['projectPath'].split('/')[2]
 print('Session found, name is: ' + sessionName + ', session ID is: ' + sessionId)
 
 ## Get condition name or add new
