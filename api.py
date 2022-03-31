@@ -3,6 +3,7 @@ import json
 import logging
 import re
 import struct
+import crcmod
 
 from os import path
 try:
@@ -47,9 +48,11 @@ Metadata = TypedDict('Metadata', {
 
 
 class MoveshelfApi(object):
-    def __init__(self, api_key_file='mvshlf-api-key.json', api_url = 'https://api.moveshelf.com/graphql'):
+    def __init__(self, api_key_file, api_url = 'https://api.moveshelf.com/graphql'):
+    #def __init__(self, api_key_file='mvshlf-api-key.json', api_url = 'https://api.moveshelf.com/graphql'):
         self._crc32c = mkPredefinedCrcFun('crc32c')
         self.api_url = api_url 
+
         if path.isfile(api_key_file) == False:
             raise ValueError("No valid API key. Please check instructions on https://github.com/moveshelf/python-api-example")
 
@@ -84,12 +87,13 @@ class MoveshelfApi(object):
             query {
                 viewer {
                     projects {
+                        id
                         name
                         id
                     }
                 }
             }
-            '''
+            ''',
         )
         return [{k:v for k,v in p.items() if k in ['name','id']} for p in data['viewer']['projects']]
 
@@ -101,6 +105,7 @@ class MoveshelfApi(object):
         logging.info('Created clip ID: %s', creation_response['mocapClip']['id'])
 
         return creation_response['mocapClip']['id']
+
 
     def uploadFile(self, file_path, project, metadata=Metadata()):
         logger.info('Uploading %s', file_path)
@@ -152,7 +157,8 @@ class MoveshelfApi(object):
             mutation updateClip($input: UpdateClipInput!) {
                 updateClip(clipData: $input) {
                     clip {
-                        id
+                        id,
+                        title
                     }
                 }
             }
@@ -311,7 +317,6 @@ class MoveshelfApi(object):
             ''',
             clipId = clip_id
         )
-
         return data['node']['additionalData']
 
     def getProjectAndClips(self):
@@ -516,6 +521,20 @@ class MoveshelfApi(object):
             }
         )
         return data['createClips']['response'][0]
+
+    def _deleteClip(self, c_id):
+        data = self._dispatch_graphql(
+            '''
+            mutation deleteClip($clipId: String) {
+                deleteClip(clipId: $clipId) {
+                    ok
+                }
+            }
+            ''',
+            clipId = c_id
+        )
+        return data['deleteClip']['ok']
+
 
     def _calculateCrc32c(self, file_path):
         with open(file_path, 'rb') as fp:
