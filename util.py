@@ -49,7 +49,7 @@ def addOrGetTrial(api, session, condition, trialName = None):
     trialCount = len(condition['clips'])
 
     if trialName == None:
-        trialNumbers = [clip['title'].split('-')[1] for clip in condition['clips'] if trialCount > 0]
+        trialNumbers = [int(clip['title'].split('-')[1]) for clip in condition['clips'] if trialCount > 0]
         trialNumber = max(trialNumbers) if len(trialNumbers) > 0 else trialCount
         trialName = "Trial-" + str(trialNumber + 1)
 

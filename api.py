@@ -49,7 +49,7 @@ Metadata = TypedDict('Metadata', {
 class MoveshelfApi(object):
     def __init__(self, api_key_file='mvshlf-api-key.json', api_url = 'https://api.moveshelf.com/graphql'):
         self._crc32c = mkPredefinedCrcFun('crc32c')
-        self.api_url = api_url 
+        self.api_url = api_url
         if path.isfile(api_key_file) == False:
             raise ValueError("No valid API key. Please check instructions on https://github.com/moveshelf/python-api-example")
 

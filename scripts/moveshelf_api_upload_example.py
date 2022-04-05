@@ -3,7 +3,7 @@ import os, sys, json
 parentFolder = os.path.dirname(os.getcwd())
 sys.path.append(parentFolder)
 from api import MoveshelfApi, Metadata
-from util.util import *
+import util
 
 
 ## Specify the details of your data to be uploaded and where it should go
@@ -86,7 +86,7 @@ print('Session found, name is: ' + sessionName + ', session ID is: ' + sessionId
 
 ## Get condition name or add new
 conditions = []
-conditions = getConditionsFromSession(session, conditions);
+conditions = util.getConditionsFromSession(session, conditions);
 
 condition = {}
 for c in conditions:
@@ -100,7 +100,7 @@ if (not condition):
 
 ## Get clip id
 
-clipId = addOrGetTrial(api, session, condition, myTrial)
+clipId = util.addOrGetTrial(api, session, condition, myTrial)
 print('Clip id is: ' + clipId)
 
 

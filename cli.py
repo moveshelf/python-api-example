@@ -18,6 +18,8 @@ if __name__ == "__main__":
                 {k: vars(args)[k] for k in params if k in vars(args)})
         print("Created new clip with ID: {}".format(clip_id))
 
+    projects = api.getUserProjects()
+
     parser = argparse.ArgumentParser()
     sub_parsers = parser.add_subparsers()
 
