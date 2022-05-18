@@ -153,7 +153,7 @@ if not stopProcessing:
     print('Existing data for clip: ')
     print(*existingFileNames, sep = "\n")
 
-    ## Upload data
+    ## Download data
     for data in existingAdditionalData:
         if not (len(dataTypesToDownload) == 0 or data['dataType'] in dataTypesToDownload):
             continue
@@ -162,12 +162,18 @@ if not stopProcessing:
         if not (len(fileExtensionsToDownload) == 0 or file_extension in fileExtensionsToDownload):
             continue
 
-        file_data = requests.get(data['originalDataDownloadUri']).content
-        # create the file in write binary mode, because the data we get from net is in binary
-        filenameSave = os.path.join(dataFolderSave, data['originalFileName'])
-        with open(filenameSave, "wb") as file:
-            file.write(file_data)
+        uploadStatus = data['uploadStatus']
+        if uploadStatus == 'Processing':
+            print('File ' + data['originalFileName'] + ' is still being processed, skipping download')
+        elif uploadStatus == 'Complete':
+            file_data = requests.get(data['originalDataDownloadUri']).content
+            # create the file in write binary mode, because the data we get from net is in binary
+            filenameSave = os.path.join(dataFolderSave, data['originalFileName'])
+            with open(filenameSave, "wb") as file:
+                file.write(file_data)
 
 
-        print('Downloaded ' + data['originalFileName'] + ' into ' + filenameSave)
+            print('Downloaded ' + data['originalFileName'] + ' into ' + filenameSave)
+        else:
+            print('File ' + data['originalFileName'] + ' status is : ' + uploadStatus  + ', skipping download')
 

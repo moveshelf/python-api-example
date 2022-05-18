@@ -304,6 +304,7 @@ class MoveshelfApi(object):
                     originalFileName
                     previewDataUri
                     originalDataDownloadUri
+                    uploadStatus
                 }
                 }
             }
@@ -372,6 +373,7 @@ class MoveshelfApi(object):
                     ... on Patient {
                         id,
                         name,
+                        metadata,
                         project {
                             id
                         }
