@@ -1,5 +1,11 @@
 from api import Metadata
 
+def getPatientMetadata(api, mySubjectId):
+    subjectDetails = api.getSubjectDetails(mySubjectId)
+    patientMetadata = eval(subjectDetails['metadata'])
+    return patientMetadata
+
+
 def getConditionsFromSession(session, conditions = []):
     sessionPath = session['projectPath']
     clips = session['clips']

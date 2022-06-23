@@ -301,10 +301,10 @@ class MoveshelfApi(object):
                 additionalData {
                     id
                     dataType
+                    uploadStatus
                     originalFileName
                     previewDataUri
                     originalDataDownloadUri
-                    uploadStatus
                 }
                 }
             }
@@ -314,6 +314,24 @@ class MoveshelfApi(object):
         )
 
         return data['node']['additionalData']
+
+    def getClipData(self, clip_id):
+        data = self._dispatch_graphql(
+            '''
+            query getClipInfo($clipId: ID!) {
+            node(id: $clipId) {
+                ... on MocapClip {
+                id,
+                title,
+                description
+                }
+            }
+            }
+            ''',
+            clipId = clip_id
+        )
+
+        return data['node']
 
     def getProjectAndClips(self):
         data = self._dispatch_graphql(
