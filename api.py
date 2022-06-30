@@ -470,7 +470,8 @@ class MoveshelfApi(object):
                 node(id: $sessionId) {
                     ... on Session {
                         id,
-                        projectPath
+                        projectPath,
+                        metadata,
                         project {
                             id
                             name
