@@ -29,6 +29,17 @@ Save the key as `mvshlf-api-key.json` in the project root directory.
 
 **The API key should be kept secret.**
 
+### Configuration
+
+You can customize connection details to your environment by copying and renaming `mvshlf-config.spec.json` to `mvhslf-config.json`.
+
+In this file you can customize the following:
+
+* `apiKeyFileName`: The filename of the api key file downloaded in the previous step, there is no need to change this if you downloaded it from Moveshelf.
+* `apiUrl`: The graphql url to use for your connection. You can change it based on your needs as follow:
+`https://api.<region>.<environment>.moveshelf.com/graphql`. You can get the region and environment parameters from your Moveshelf instance url.
+
+
 ## Running
 
 The `cli.py` file provides a simple command line interface to the API.
