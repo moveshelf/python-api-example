@@ -9,7 +9,7 @@ import util
 ## Specify the details of your data to be uploaded and where it should go
 dataPath = r'<Path of folder where data is located>'  # e.g. r'C:\Users\testUser\Data\testTrial1'
 filesToUpload = ['<list of files to upload>']  # list of files to be uploaded
-dataType = '<data_type>'   # type of the data to be uploaded, see above for definition, e.g. 'data'
+dataType = 'data'   # type of the data to be uploaded, e.g. 'data'
 
 myProject = '<user>/<projectName>' # e.g. support/demoProject
 mySubject = '<name>' # subject name, e.g. Subject1
